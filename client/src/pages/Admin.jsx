@@ -148,7 +148,7 @@ const Admin = () => {
 
         {/* ================= ACTION ================= */}
         <div onClick={()=> navigate('/auction')} className="pt-6 border-t border-slate-200 flex justify-end">
-          <button className="px-10 py-3 bg-blue-700 text-white rounded-md text-sm font-medium hover:bg-blue-800 transition">
+          <button onClick={()=> navigate('/auction')} className="px-10 py-3 bg-blue-700 text-white rounded-md text-sm font-medium hover:bg-blue-800 transition">
             Start Auction
           </button>
         </div>
