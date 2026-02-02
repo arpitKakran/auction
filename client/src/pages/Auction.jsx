@@ -1,11 +1,10 @@
-import React from 'react'
+import React from "react";
 
 const Auction = () => {
   return (
-    <div>
-      
-    </div>
-  )
-}
+    <>
+    </>
+  );
+};
 
-export default Auction
+export default Auction;

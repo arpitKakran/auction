@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import auction_logo from "../assets/auction_logo.png";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // UI only
+  const [isLoggedIn, setIsLoggedIn] = useState(true); 
+  const navigate= useNavigate();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -109,7 +111,7 @@ const Home = () => {
               Incomplete Auctions
             </h3>
 
-            <div className="bg-white border-l-4 border-yellow-500 rounded-xl border border-slate-200 p-6">
+            <div className="bg-white border-l-4  rounded-xl border border-slate-200 p-6">
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-medium text-slate-800">
@@ -146,7 +148,7 @@ const Home = () => {
                 </p>
               </div>
 
-              <button className="px-6 py-2 bg-blue-700 text-white rounded-md text-sm hover:bg-blue-800 transition">
+              <button onClick={()=> {navigate('/admin')}} className="px-6 py-2 bg-blue-700 text-white rounded-md text-sm hover:bg-blue-800 transition">
                 Create Auction
               </button>
             </div>
