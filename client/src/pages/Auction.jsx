@@ -110,7 +110,7 @@ const Auction = () => {
       Current Bid
     </p>
     <p className="text-6xl font-extrabold text-blue-700 leading-tight">
-      ₹ 25,00,00,000
+      ₹ 18,00,00,000
     </p>
     <p className="text-sm text-slate-600">
       Leading Team: <span className="font-medium">CSK</span>
