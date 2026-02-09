@@ -2,22 +2,17 @@ import Admin from "../models/adminModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-/* ================= REGISTER ADMIN ================= */
 const registerAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "Please fill all details",
-      });
+      return res.status(400).json({ message: "Please fill all details" });
     }
 
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
-      return res.status(400).json({
-        message: "Admin already exists",
-      });
+      return res.status(400).json({ message: "Admin already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -28,22 +23,28 @@ const registerAdmin = async (req, res) => {
       password: hashedPassword,
     });
 
+    // 🔑 ISSUE TOKEN (THIS IS THE FIX)
+    const token = jwt.sign(
+      { id: newAdmin._id, email: newAdmin.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     return res.status(201).json({
       message: "Admin registered successfully",
+      token,
       admin: {
         id: newAdmin._id,
         name: newAdmin.name,
         email: newAdmin.email,
       },
     });
-
   } catch (error) {
     console.error("Register Admin Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
 
 /* ================= LOGIN ADMIN ================= */
 const loginAdmin = async (req, res) => {
