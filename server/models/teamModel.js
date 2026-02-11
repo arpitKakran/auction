@@ -2,15 +2,10 @@ import mongoose from "mongoose";
 
 const teamSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
+    globalTeam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "GlobalTeam",
       required: true,
-    },
-
-    shortCode: {
-      type: String,
-      required: true,
-      uppercase: true,
     },
 
     auction: {
@@ -32,11 +27,13 @@ const teamSchema = new mongoose.Schema(
     players: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Player",
+        ref: "AuctionPlayer",
       },
     ],
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Team", teamSchema);
+const Team = mongoose.model("Team", teamSchema);
+
+export default Team;

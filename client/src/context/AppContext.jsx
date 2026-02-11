@@ -11,13 +11,10 @@ const AppContextProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const [showLogin, setShowLogin] = useState(false);
 
+  // ================= AUTH (UNCHANGED) =================
   const loginUser = async ({ email, password }) => {
     try {
-      const { data } = await axios.post("/api/auth/login", {
-        email,
-        password,
-      });
-
+      const { data } = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", data.token);
       setIsLoggedIn(true);
       setShowLogin(false);
@@ -35,7 +32,6 @@ const AppContextProvider = ({ children }) => {
         email,
         password,
       });
-
       localStorage.setItem("token", data.token);
       setIsLoggedIn(true);
       setShowLogin(false);
@@ -48,8 +44,37 @@ const AppContextProvider = ({ children }) => {
 
   const logoutUser = () => {
     localStorage.removeItem("token");
-    toast.success("Logged out successfully");
     setIsLoggedIn(false);
+    toast.success("Logged out");
+  };
+
+  // ================= CREATE AUCTION =================
+  const createAuction = async (payload) => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post("/api/auction/create", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Auction created");
+      return data.auctionId;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Auction creation failed");
+      return null;
+    }
+  };
+
+  // ================= GET AUCTION BY ID =================
+  const getAuctionById = async (auctionId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(`/api/auction/${auctionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return data.auction;
+    } catch (err) {
+      toast.error("Failed to load auction");
+      return null;
+    }
   };
 
   return (
@@ -61,6 +86,8 @@ const AppContextProvider = ({ children }) => {
         loginUser,
         registerUser,
         logoutUser,
+        createAuction,
+        getAuctionById,
       }}
     >
       {children}

@@ -16,8 +16,8 @@ const auctionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["upcoming", "live", "paused", "completed"],
-      default: "upcoming",
+      enum: ["live", "completed"],
+      default: "live",
     },
 
     teams: [
@@ -32,27 +32,15 @@ const auctionSchema = new mongoose.Schema(
         type: Number,
         required: true,
       },
-
       pursePerTeam: {
         type: Number,
         required: true,
       },
-
-      minBasePrice: {
-        type: Number,
-        required: true,
-      },
-
-      allowedCategories: {
-        type: [String],
-        default: ["all"],
-      },
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const Auction = mongoose.model("Auction", auctionSchema);
+
 export default Auction;

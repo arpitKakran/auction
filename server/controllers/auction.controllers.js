@@ -1,46 +1,94 @@
 import Auction from "../models/auctionModel.js";
-import Admin from "../models/adminModel.js";
 import Team from "../models/teamModel.js";
+import GlobalTeam from "../models/globalTeamModel.js";
+import Admin from "../models/adminModel.js";
 
-/* ================= CREATE AUCTION ================= */
+/* ================= CREATE AUCTION (LIVE IMMEDIATELY) ================= */
 const createAuction = async (req, res) => {
   try {
-    const adminId = req.admin.id; // from auth middleware (later)
-    const {
-      name,
-      teams,
-      rules,
-    } = req.body;
+    const adminId = req.admin.id;
+    const { name, teamShortCodes, rules } = req.body;
 
-    if (!name || !teams || teams.length < 2 || !rules) {
+    if (
+      !name ||
+      !teamShortCodes?.length ||
+      teamShortCodes.length < 2 ||
+      !rules?.maxPlayersPerTeam ||
+      !rules?.pursePerTeam
+    ) {
       return res.status(400).json({
         message: "Invalid auction configuration",
       });
     }
 
+    // Create auction as LIVE directly
     const auction = await Auction.create({
       name,
       owner: adminId,
-      teams,
       rules,
-      status: "upcoming",
+      status: "live",
     });
 
-    // Attach auction to admin
+    // Fetch global teams
+    const globalTeams = await GlobalTeam.find({
+      shortCode: { $in: teamShortCodes },
+    });
+
+    if (globalTeams.length !== teamShortCodes.length) {
+      return res.status(400).json({
+        message: "Invalid teams selected",
+      });
+    }
+
+    // Create auction-scoped teams
+    const auctionTeams = await Team.insertMany(
+      globalTeams.map((gt) => ({
+        globalTeam: gt._id,
+        auction: auction._id,
+        totalPurse: rules.pursePerTeam,
+        remainingPurse: rules.pursePerTeam,
+        players: [],
+      }))
+    );
+
+    auction.teams = auctionTeams.map((t) => t._id);
+    await auction.save();
+
     await Admin.findByIdAndUpdate(adminId, {
       $push: { auctions: auction._id },
     });
 
     return res.status(201).json({
-      message: "Auction room created",
+      message: "Auction created",
       auctionId: auction._id,
     });
+  } catch (err) {
+    console.error("Create Auction Error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
-  } catch (error) {
-    console.error("Create Auction Error:", error);
-    return res.status(500).json({
-      message: "Server error",
+/* ================= GET AUCTION BY ID ================= */
+const getAuctionById = async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+
+    const auction = await Auction.findById(auctionId).populate({
+      path: "teams",
+      populate: {
+        path: "globalTeam",
+        select: "shortCode name logo",
+      },
     });
+
+    if (!auction) {
+      return res.status(404).json({ message: "Auction not found" });
+    }
+
+    return res.status(200).json({ auction });
+  } catch (err) {
+    console.error("Get Auction Error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -50,53 +98,20 @@ const getMyAuctions = async (req, res) => {
     const adminId = req.admin.id;
 
     const auctions = await Auction.find({ owner: adminId })
-      .populate("teams", "name shortCode")
+      .populate({
+        path: "teams",
+        populate: {
+          path: "globalTeam",
+          select: "shortCode name logo",
+        },
+      })
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      auctions,
-    });
-
-  } catch (error) {
-    console.error("Get Auctions Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(200).json({ auctions });
+  } catch (err) {
+    console.error("Get My Auctions Error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ================= START AUCTION ================= */
-const startAuction = async (req, res) => {
-  try {
-    const { auctionId } = req.params;
-
-    const auction = await Auction.findById(auctionId);
-
-    if (!auction) {
-      return res.status(404).json({
-        message: "Auction not found",
-      });
-    }
-
-    if (auction.status !== "upcoming") {
-      return res.status(400).json({
-        message: "Auction already started or completed",
-      });
-    }
-
-    auction.status = "live";
-    await auction.save();
-
-    return res.status(200).json({
-      message: "Auction started",
-    });
-
-  } catch (error) {
-    console.error("Start Auction Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
-  }
-};
-
-export { createAuction, getMyAuctions, startAuction };
+export { createAuction, getAuctionById, getMyAuctions };
