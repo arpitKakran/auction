@@ -7,7 +7,8 @@ import authRouter from "./routes/auth.routes.js";
 import auctionRouter from "./routes/auction.routes.js";
 import playerRouter from "./routes/player.routes.js";
 import bidStateRouter from "./routes/bid.routes.js";
-import teamRoutes from "./routes/team.routes.js";
+import teamRouter from "./routes/team.routes.js";
+import auctionPlayerRouter from "./routes/auctionPlayer.routes.js";
 
 dotenv.config();
 
@@ -32,7 +33,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/auction", auctionRouter);
 app.use("/api/player", playerRouter);
 app.use("/api/bidstate", bidStateRouter);
-app.use("/api/team", teamRoutes);
+app.use("/api/team", teamRouter);
+app.use("/api/auction-player",auctionPlayerRouter);
 
 // Test
 app.get("/", (req, res) => {

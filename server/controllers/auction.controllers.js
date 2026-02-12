@@ -2,8 +2,10 @@ import Auction from "../models/auctionModel.js";
 import Team from "../models/teamModel.js";
 import GlobalTeam from "../models/globalTeamModel.js";
 import Admin from "../models/adminModel.js";
+import Player from "../models/playerModel.js";
+import AuctionPlayer from "../models/auctionPlayerModel.js";
 
-/* ================= CREATE AUCTION (LIVE IMMEDIATELY) ================= */
+/* ================= CREATE AUCTION ================= */
 const createAuction = async (req, res) => {
   try {
     const adminId = req.admin.id;
@@ -21,7 +23,7 @@ const createAuction = async (req, res) => {
       });
     }
 
-    // Create auction as LIVE directly
+    // Create auction
     const auction = await Auction.create({
       name,
       owner: adminId,
@@ -40,7 +42,7 @@ const createAuction = async (req, res) => {
       });
     }
 
-    // Create auction-scoped teams
+    // Create auction teams
     const auctionTeams = await Team.insertMany(
       globalTeams.map((gt) => ({
         globalTeam: gt._id,
@@ -57,6 +59,23 @@ const createAuction = async (req, res) => {
     await Admin.findByIdAndUpdate(adminId, {
       $push: { auctions: auction._id },
     });
+
+    /* ================= CREATE AUCTION PLAYER POOL ================= */
+
+    const players = await Player.find();
+
+    if (players.length === 0) {
+      return res.status(400).json({
+        message: "No players available. Create players first.",
+      });
+    }
+
+    await AuctionPlayer.insertMany(
+      players.map((p) => ({
+        auction: auction._id,
+        player: p._id,
+      }))
+    );
 
     return res.status(201).json({
       message: "Auction created",

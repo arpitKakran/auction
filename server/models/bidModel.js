@@ -11,7 +11,7 @@ const bidStateSchema = new mongoose.Schema(
 
     currentPlayer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Player",
+      ref: "AuctionPlayer",
       default: null,
     },
 

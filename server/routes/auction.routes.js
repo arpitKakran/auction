@@ -6,10 +6,10 @@ import {
   getAuctionById,
 } from "../controllers/auction.controllers.js";
 
-const router = express.Router();
+const auctionRouter = express.Router();
 
-router.post("/create", protect, createAuction);
-router.get("/my-auctions", protect, getMyAuctions);
-router.get("/:auctionId", protect, getAuctionById);
+auctionRouter.post("/create", protect, createAuction);
+auctionRouter.get("/my-auctions", protect, getMyAuctions);
+auctionRouter.get("/:auctionId", protect, getAuctionById);
 
-export default router;
+export default auctionRouter;

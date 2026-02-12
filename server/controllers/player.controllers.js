@@ -26,7 +26,7 @@ const createPlayer = async (req, res) => {
       bowling,
       keeping,
       basePrice,
-      imageUrl,
+      imageUrl, // example: "/player-images/kohli.png"
     });
 
     return res.status(201).json({
@@ -41,98 +41,15 @@ const createPlayer = async (req, res) => {
   }
 };
 
-/* ================= GET PLAYERS BY ROLE ================= */
-const getPlayersByRole = async (req, res) => {
+/* ================= GET ALL PLAYERS ================= */
+const getAllPlayers = async (req, res) => {
   try {
-    const { role } = req.query;
-
-    const filter = {
-      isActive: true,
-    };
-
-    if (role && role !== "all") {
-      filter.role = role;
-    }
-
-    const players = await Player.find(filter);
-
-    return res.status(200).json({
-      players,
-    });
+    const players = await Player.find();
+    return res.status(200).json({ players });
   } catch (error) {
     console.error("Get Players Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ================= GET RANDOM PLAYER ================= */
-const getRandomPlayer = async (req, res) => {
-  try {
-    const { role } = req.query;
-
-    const filter = {
-      isActive: true,
-    };
-
-    if (role && role !== "all") {
-      filter.role = role;
-    }
-
-    const count = await Player.countDocuments(filter);
-
-    if (count === 0) {
-      return res.status(404).json({
-        message: "No players available",
-      });
-    }
-
-    const random = Math.floor(Math.random() * count);
-
-    const player = await Player.findOne(filter).skip(random);
-
-    return res.status(200).json({
-      player,
-    });
-  } catch (error) {
-    console.error("Random Player Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
-  }
-};
-
-/* ================= DEACTIVATE PLAYER ================= */
-const deactivatePlayer = async (req, res) => {
-  try {
-    const { playerId } = req.params;
-
-    const player = await Player.findById(playerId);
-
-    if (!player) {
-      return res.status(404).json({
-        message: "Player not found",
-      });
-    }
-
-    player.isActive = false;
-    await player.save();
-
-    return res.status(200).json({
-      message: "Player removed from pool",
-    });
-  } catch (error) {
-    console.error("Deactivate Player Error:", error);
-    return res.status(500).json({
-      message: "Server error",
-    });
-  }
-};
-
-export {
-  createPlayer,
-  getPlayersByRole,
-  getRandomPlayer,
-  deactivatePlayer,
-};
+export { createPlayer, getAllPlayers };

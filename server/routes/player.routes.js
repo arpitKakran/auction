@@ -2,16 +2,15 @@ import express from "express";
 import protect from "../middleware/auth.middleware.js";
 import {
   createPlayer,
-  getPlayersByRole,
-  getRandomPlayer,
-  deactivatePlayer,
+  getAllPlayers,
 } from "../controllers/player.controllers.js";
 
-const router = express.Router();
+const playerRouter = express.Router();
 
-router.post("/create", protect, createPlayer);
-router.get("/", protect, getPlayersByRole);
-router.get("/random", protect, getRandomPlayer);
-router.patch("/deactivate/:playerId", protect, deactivatePlayer);
+/* ================= CREATE PLAYER ================= */
+playerRouter.post("/create", protect, createPlayer);
 
-export default router;
+/* ================= GET ALL PLAYERS ================= */
+playerRouter.get("/", protect, getAllPlayers);
+
+export default playerRouter;
