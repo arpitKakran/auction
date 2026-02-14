@@ -54,7 +54,7 @@ const AppContextProvider = ({ children }) => {
     toast.success("Logged out");
   };
 
-  // ================= CREATE AUCTION =================
+  // ================= AUCTION =================
   const createAuction = async (payload) => {
     try {
       const { data } = await axios.post(
@@ -70,7 +70,6 @@ const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ================= GET AUCTION BY ID =================
   const getAuctionById = async (auctionId) => {
     try {
       const { data } = await axios.get(
@@ -84,7 +83,7 @@ const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ================= GET BID STATE =================
+  // ================= BID STATE =================
   const getBidState = async (auctionId) => {
     try {
       const { data } = await axios.get(
@@ -92,13 +91,12 @@ const AppContextProvider = ({ children }) => {
         getAuthHeader()
       );
       return data.bidState;
-    } catch (err) {
+    } catch {
       return null;
     }
   };
 
-  // ================= NEXT PLAYER =================
-  const nextPlayer = async (auctionId, role = "all") => {
+  const nextPlayer = async (auctionId, role) => {
     try {
       await axios.post(
         "/api/bidstate/next",
@@ -110,7 +108,6 @@ const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ================= INCREMENT BID =================
   const incrementBid = async (auctionId, teamId, increment) => {
     try {
       await axios.post(
@@ -123,7 +120,6 @@ const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ================= SOLD =================
   const markSold = async (auctionId) => {
     try {
       await axios.post(
@@ -132,25 +128,23 @@ const AppContextProvider = ({ children }) => {
         getAuthHeader()
       );
       toast.success("Player sold");
-    } catch (err) {
+    } catch {
       toast.error("Failed to mark sold");
     }
   };
 
-  // ================= GET MY AUCTIONS =================
-const getMyAuctions = async () => {
-  try {
-    const { data } = await axios.get(
-      "/api/auction/my-auctions",
-      getAuthHeader()
-    );
-    return data.auctions;
-  } catch (err) {
-    toast.error("Failed to load auctions");
-    return [];
-  }
-};
-
+  const setBiddingTeams = async (auctionId, teamA, teamB) => {
+    try {
+      await axios.post(
+        "/api/bidstate/set-teams",
+        { auctionId, teamA, teamB },
+        getAuthHeader()
+      );
+      toast.success("Bidding teams updated");
+    } catch {
+      toast.error("Failed to set bidding teams");
+    }
+  };
 
   return (
     <AppContext.Provider
@@ -167,7 +161,7 @@ const getMyAuctions = async () => {
         nextPlayer,
         incrementBid,
         markSold,
-        getMyAuctions,
+        setBiddingTeams,
       }}
     >
       {children}

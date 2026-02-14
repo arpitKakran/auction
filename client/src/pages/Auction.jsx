@@ -1,128 +1,202 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
-import axios from "axios";
+
+const roles = ["all", "batter", "bowler", "allrounder", "keeper"];
+
+// 💰 Format number to Cr / L
+const formatCurrency = (amount) => {
+  if (!amount) return "₹ 0";
+
+  const crore = 10000000;
+  const lakh = 100000;
+
+  if (amount >= crore) {
+    return `₹ ${(amount / crore).toFixed(2)} Cr`;
+  } else if (amount >= lakh) {
+    return `₹ ${(amount / lakh).toFixed(0)} L`;
+  } else {
+    return `₹ ${amount}`;
+  }
+};
 
 const Auction = () => {
   const { auctionId } = useParams();
-  const { getAuctionById } = useContext(AppContext);
+  const {
+    getAuctionById,
+    getBidState,
+    nextPlayer,
+    incrementBid,
+    markSold,
+    setBiddingTeams,
+  } = useContext(AppContext);
 
   const [auction, setAuction] = useState(null);
   const [bidState, setBidState] = useState(null);
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [teamA, setTeamA] = useState("");
+  const [teamB, setTeamB] = useState("");
 
-  const token = localStorage.getItem("token");
-
-  const fetchBidState = async () => {
-    try {
-      const { data } = await axios.get(
-        `/api/bidstate/${auctionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setBidState(data.bidState);
-    } catch (err) {
-      console.log("No active bid state");
-    }
+  const refresh = async () => {
+    const a = await getAuctionById(auctionId);
+    const b = await getBidState(auctionId);
+    setAuction(a);
+    setBidState(b);
   };
 
   useEffect(() => {
-    const loadAuction = async () => {
-      const data = await getAuctionById(auctionId);
-      setAuction(data);
-    };
-    loadAuction();
-    fetchBidState();
-  }, [auctionId]);
+    refresh();
+  }, []);
 
-  const handleNextPlayer = async () => {
-    await axios.post(
-      "/api/bidstate/next",
-      { auctionId, role: "all" },
-      { headers: { Authorization: `Bearer ${token}` } }
+  if (!auction)
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Loading...
+      </div>
     );
-    fetchBidState();
-  };
-
-  const handleIncrement = async (teamId, amount) => {
-    await axios.post(
-      "/api/bidstate/increment",
-      { auctionId, teamId, increment: amount },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    fetchBidState();
-  };
-
-  const handleSold = async () => {
-    await axios.post(
-      "/api/bidstate/sold",
-      { auctionId },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    fetchBidState();
-  };
-
-  if (!auction) {
-    return <div className="p-10 text-center">Loading...</div>;
-  }
 
   const currentPlayer = bidState?.currentPlayer?.player;
   const leadingTeam = bidState?.leadingTeam;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="h-screen w-screen flex bg-white overflow-hidden">
 
-      {/* ================= LEFT SIDE ================= */}
-      <aside className="w-[22%] bg-white border-r p-4 flex flex-col justify-between">
+      {/* ================= LEFT PANEL ================= */}
+      <aside className="w-[22%] border-r border-slate-200 flex flex-col justify-between p-6">
 
-        {/* TOP - Leading Team Logo */}
-        <div className="flex flex-col items-center">
-          {leadingTeam?.globalTeam?.logo ? (
+        {/* Leading Team */}
+        <div className="text-center">
+          {leadingTeam ? (
             <>
               <img
                 src={leadingTeam.globalTeam.logo}
-                alt="Leading Team"
-                className="w-20 h-20 object-contain"
+                className=" w-45 h-45 mx-auto object-contain"
               />
-              <p className="mt-2 font-semibold">
+              <p className="text-xl font-bold mt-1 ">
                 {leadingTeam.globalTeam.shortCode}
+              </p>
+              <p className="text-sm text-slate-500 ">
+                Leading Bid
               </p>
             </>
           ) : (
-            <p className="text-slate-500">No Leading Team</p>
+            <p className="text-slate-400 text-lg">
+              No Leading Team
+            </p>
           )}
         </div>
 
-        {/* BOTTOM CONTROLS */}
-        <div className="space-y-3">
+        {/* Controls */}
+        <div className="space-y-4">
+
+          {/* Pool */}
+          <div>
+            <p className="text-sm font-semibold mb-1">
+              Select Pool
+            </p>
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full border rounded p-2"
+            >
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Team Selection */}
+          <div>
+            <p className="text-sm font-semibold mb-1">
+              Bidding Teams
+            </p>
+
+            <select
+              value={teamA}
+              onChange={(e) => setTeamA(e.target.value)}
+              className="w-full border rounded p-2 mb-2"
+            >
+              <option value="">Select Team A</option>
+              {auction.teams.map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.globalTeam.shortCode}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={teamB}
+              onChange={(e) => setTeamB(e.target.value)}
+              className="w-full border rounded p-2"
+            >
+              <option value="">Select Team B</option>
+              {auction.teams.map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.globalTeam.shortCode}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setBiddingTeams(auctionId, teamA, teamB)}
+              className="w-full bg-slate-800 text-white py-2 mt-3 rounded-lg font-semibold"
+            >
+              Set Teams
+            </button>
+          </div>
 
           <button
-            onClick={handleNextPlayer}
-            className="w-full bg-slate-900 text-white py-2 rounded"
+            onClick={async () => {
+              await nextPlayer(auctionId, selectedRole);
+              refresh();
+            }}
+            className="w-full bg-black text-white py-3 rounded-lg font-bold text-lg"
           >
             NEXT PLAYER
           </button>
 
-          {auction.teams.slice(0, 2).map((team) => (
-            <div key={team._id} className="space-y-2">
-              <p className="font-semibold">
-                {team.globalTeam.shortCode}
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {[1000000, 2000000, 2500000].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => handleIncrement(team._id, amt)}
-                    className="bg-blue-600 text-white py-1 rounded text-sm"
-                  >
-                    +{amt / 100000}L
-                  </button>
-                ))}
+          {/* Bid Buttons */}
+          {bidState?.biddingTeams?.map((teamId) => {
+            const team = auction.teams.find(
+              (t) => t._id === teamId
+            );
+            if (!team) return null;
+
+            return (
+              <div key={team._id}>
+                <p className="font-bold text-lg mb-1">
+                  {team.globalTeam.shortCode}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[1000000, 2000000, 2500000].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={async () => {
+                        await incrementBid(
+                          auctionId,
+                          team._id,
+                          amt
+                        );
+                        refresh();
+                      }}
+                      className="bg-blue-600 text-white py-2 rounded-lg font-semibold"
+                    >
+                      +{amt / 100000}L
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           <button
-            onClick={handleSold}
-            className="w-full bg-green-600 text-white py-2 rounded"
+            onClick={async () => {
+              await markSold(auctionId);
+              refresh();
+            }}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg"
           >
             SOLD
           </button>
@@ -130,67 +204,107 @@ const Auction = () => {
       </aside>
 
       {/* ================= CENTER ================= */}
-      <main className="w-[56%] flex flex-col items-center justify-center text-center px-6">
+      <main className="w-[56%] flex flex-col items-center justify-center text-center px-10">
 
         {currentPlayer ? (
           <>
             <img
               src={currentPlayer.imageUrl}
-              alt={currentPlayer.name}
-              className="w-64 h-64 object-contain"
+              className="w-105 h-105 object-contain"
             />
-            <h1 className="text-3xl font-bold mt-4">
+
+            <h1 className="text-5xl font-extrabold mt-2">
               {currentPlayer.name}
             </h1>
-            <p className="text-slate-500">
+
+            <p className="text-xl text-slate-500 capitalize">
               {currentPlayer.role}
             </p>
 
-            <p className="text-6xl font-extrabold text-blue-700 mt-6">
-              ₹ {bidState?.currentBid || currentPlayer.basePrice}
+            {/* Player Stats */}
+            <div className="flex bg-slate-100 rounded-2xl p-3 gap-10 mt-3 text-center">
+              <div>
+                <p className="text-sm text-slate-400">
+                  Batting
+                </p>
+                <p className="text-2xl font-bold">
+                  {currentPlayer.batting}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">
+                  Bowling
+                </p>
+                <p className="text-2xl font-bold">
+                  {currentPlayer.bowling}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">
+                  Keeping
+                </p>
+                <p className="text-2xl font-bold">
+                  {currentPlayer.keeping}
+                </p>
+              </div>
+            </div>
+
+            {/* Current Bid */}
+            <p className=" rounded-2xl shadow-xs bg-slate-100 p-4 text-7xl font-extrabold text-blue-700 mt-7">
+              {formatCurrency(bidState?.currentBid)} 
+              <p className="text-lg text-black mt-1"> Current Bid</p>
             </p>
+            
           </>
         ) : (
-          <p className="text-xl text-slate-500">
-            Click NEXT PLAYER to start
+          <p className="text-2xl text-slate-400">
+            Select Pool & Click NEXT PLAYER
           </p>
         )}
       </main>
 
-      {/* ================= RIGHT SIDE ================= */}
-      <aside className="w-[22%] bg-white border-l p-4 overflow-y-auto">
-        <h2 className="font-semibold mb-4">Remaining Purse</h2>
+      {/* ================= RIGHT PANEL ================= */}
+      <aside className="w-[22%] border-l border-slate-200 p-6">
 
-        {auction.teams.map((team) => {
-          const percent =
-            (team.remainingPurse / team.totalPurse) * 100;
+        <h2 className="text-center text-xl font-bold mb-4">
+          Remaining Purse
+        </h2>
 
-          return (
-            <div key={team._id} className="mb-4">
-              <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 grid-rows-6 gap-4 h-[92%]">
+          {auction.teams.slice(0, 12).map((team) => (
+            <div
+              key={team._id}
+              className="border rounded-xl p-4 flex flex-col justify-between shadow-sm"
+            >
+              <div className="flex items-center gap-3">
                 <img
                   src={team.globalTeam.logo}
-                  alt={team.globalTeam.shortCode}
-                  className="w-8 h-8 object-contain"
+                  className="w-10 h-10 object-contain"
                 />
                 <span className="font-semibold">
                   {team.globalTeam.shortCode}
                 </span>
               </div>
 
-              <p className="text-lg font-bold">
-                ₹ {team.remainingPurse}
+              <p className="text-lg font-bold mt-2">
+                {formatCurrency(team.remainingPurse)}
               </p>
 
               <div className="h-2 bg-slate-200 rounded-full">
                 <div
                   className="h-full bg-blue-600 rounded-full"
-                  style={{ width: `${percent}%` }}
+                  style={{
+                    width: `${
+                      (team.remainingPurse /
+                        team.totalPurse) *
+                      100
+                    }%`,
+                  }}
                 />
               </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </aside>
     </div>
   );

@@ -7,7 +7,6 @@ const nextPlayer = async (req, res) => {
   try {
     const { auctionId, role } = req.body;
 
-    // Get all pending players for auction
     const players = await AuctionPlayer.find({
       auction: auctionId,
       status: "pending",
@@ -19,7 +18,6 @@ const nextPlayer = async (req, res) => {
       });
     }
 
-    // Optional category filtering
     const filtered =
       role && role !== "all"
         ? players.filter((p) => p.player.role === role)
@@ -34,7 +32,6 @@ const nextPlayer = async (req, res) => {
     const randomIndex = Math.floor(Math.random() * filtered.length);
     const selected = filtered[randomIndex];
 
-    // Create or update BidState
     let bidState = await BidState.findOne({ auction: auctionId });
 
     if (!bidState) {
@@ -59,91 +56,12 @@ const nextPlayer = async (req, res) => {
   }
 };
 
-/* ================= SOLD PLAYER ================= */
-const markSold = async (req, res) => {
-  try {
-    const { auctionId } = req.body;
-
-    const bidState = await BidState.findOne({ auction: auctionId });
-
-    if (!bidState || !bidState.currentPlayer) {
-      return res.status(400).json({
-        message: "No active player",
-      });
-    }
-
-    if (!bidState.leadingTeam) {
-      return res.status(400).json({
-        message: "No team has placed a bid",
-      });
-    }
-
-    const auctionPlayer = await AuctionPlayer.findById(
-      bidState.currentPlayer
-    );
-
-    auctionPlayer.status = "sold";
-    auctionPlayer.soldPrice = bidState.currentBid;
-    auctionPlayer.soldTo = bidState.leadingTeam;
-    await auctionPlayer.save();
-
-    // Deduct purse
-    const team = await Team.findById(bidState.leadingTeam);
-    team.remainingPurse -= bidState.currentBid;
-    team.players.push(auctionPlayer.player);
-    await team.save();
-
-    bidState.status = "sold";
-    bidState.currentPlayer = null;
-    await bidState.save();
-
-    return res.status(200).json({
-      message: "Player sold successfully",
-    });
-  } catch (error) {
-    console.error("Sold Error:", error);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-/* ================= UNSOLD PLAYER ================= */
-const markUnsold = async (req, res) => {
-  try {
-    const { auctionId } = req.body;
-
-    const bidState = await BidState.findOne({ auction: auctionId });
-
-    if (!bidState || !bidState.currentPlayer) {
-      return res.status(400).json({
-        message: "No active player",
-      });
-    }
-
-    const auctionPlayer = await AuctionPlayer.findById(
-      bidState.currentPlayer
-    );
-
-    auctionPlayer.status = "unsold";
-    await auctionPlayer.save();
-
-    bidState.status = "unsold";
-    bidState.currentPlayer = null;
-    await bidState.save();
-
-    return res.status(200).json({
-      message: "Player marked unsold",
-    });
-  } catch (error) {
-    console.error("Unsold Error:", error);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
 /* ================= INCREMENT BID ================= */
 const incrementBid = async (req, res) => {
   try {
     const { auctionId, teamId, increment } = req.body;
 
-    const allowedIncrements = [1000000, 2000000, 2500000]; // 10L, 20L, 25L
+    const allowedIncrements = [1000000, 2000000, 2500000];
 
     if (!allowedIncrements.includes(increment)) {
       return res.status(400).json({
@@ -159,13 +77,40 @@ const incrementBid = async (req, res) => {
       });
     }
 
-    if (!bidState.biddingTeams.includes(teamId)) {
+    if (!bidState.biddingTeams || bidState.biddingTeams.length !== 2) {
+      return res.status(400).json({
+        message: "Select two bidding teams first",
+      });
+    }
+
+    // FIXED ObjectId comparison
+    const isAllowedTeam = bidState.biddingTeams.some(
+      (t) => t.toString() === teamId
+    );
+
+    if (!isAllowedTeam) {
       return res.status(400).json({
         message: "This team cannot bid",
       });
     }
 
+    // Prevent same team bidding consecutively
+    if (
+      bidState.leadingTeam &&
+      bidState.leadingTeam.toString() === teamId
+    ) {
+      return res.status(400).json({
+        message: "Same team cannot bid consecutively",
+      });
+    }
+
     const team = await Team.findById(teamId);
+
+    if (!team) {
+      return res.status(404).json({
+        message: "Team not found",
+      });
+    }
 
     const newBid = bidState.currentBid + increment;
 
@@ -198,6 +143,95 @@ const incrementBid = async (req, res) => {
   }
 };
 
+/* ================= SOLD PLAYER ================= */
+const markSold = async (req, res) => {
+  try {
+    const { auctionId } = req.body;
+
+    const bidState = await BidState.findOne({ auction: auctionId });
+
+    if (!bidState || !bidState.currentPlayer) {
+      return res.status(400).json({
+        message: "No active player",
+      });
+    }
+
+    if (!bidState.leadingTeam) {
+      return res.status(400).json({
+        message: "No team has placed a bid",
+      });
+    }
+
+    const auctionPlayer = await AuctionPlayer.findById(
+      bidState.currentPlayer
+    );
+
+    auctionPlayer.status = "sold";
+    auctionPlayer.soldPrice = bidState.currentBid;
+    auctionPlayer.soldTo = bidState.leadingTeam;
+    await auctionPlayer.save();
+
+    const team = await Team.findById(bidState.leadingTeam);
+    team.remainingPurse -= bidState.currentBid;
+    team.players.push(auctionPlayer.player);
+    await team.save();
+
+    // FULL RESET
+    bidState.status = "idle";
+    bidState.currentPlayer = null;
+    bidState.currentBid = null;
+    bidState.leadingTeam = null;
+    bidState.bidHistory = [];
+
+    await bidState.save();
+
+    return res.status(200).json({
+      message: "Player sold successfully",
+    });
+  } catch (error) {
+    console.error("Sold Error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ================= UNSOLD PLAYER ================= */
+const markUnsold = async (req, res) => {
+  try {
+    const { auctionId } = req.body;
+
+    const bidState = await BidState.findOne({ auction: auctionId });
+
+    if (!bidState || !bidState.currentPlayer) {
+      return res.status(400).json({
+        message: "No active player",
+      });
+    }
+
+    const auctionPlayer = await AuctionPlayer.findById(
+      bidState.currentPlayer
+    );
+
+    auctionPlayer.status = "unsold";
+    await auctionPlayer.save();
+
+    // FULL RESET
+    bidState.status = "idle";
+    bidState.currentPlayer = null;
+    bidState.currentBid = null;
+    bidState.leadingTeam = null;
+    bidState.bidHistory = [];
+
+    await bidState.save();
+
+    return res.status(200).json({
+      message: "Player marked unsold",
+    });
+  } catch (error) {
+    console.error("Unsold Error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 /* ================= SET BIDDING TEAMS ================= */
 const setBiddingTeams = async (req, res) => {
   try {
@@ -219,13 +253,15 @@ const setBiddingTeams = async (req, res) => {
     await bidState.save();
 
     return res.status(200).json({
-      message: "Bidding teams set",
+      message: "Bidding teams updated",
     });
   } catch (error) {
     console.error("Set Bidding Teams Error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/* ================= GET BID STATE ================= */
 const getBidStateByAuction = async (req, res) => {
   try {
     const { auctionId } = req.params;
@@ -251,5 +287,11 @@ const getBidStateByAuction = async (req, res) => {
   }
 };
 
-
-export { nextPlayer, markSold, markUnsold, incrementBid, setBiddingTeams, getBidStateByAuction };
+export {
+  nextPlayer,
+  incrementBid,
+  markSold,
+  markUnsold,
+  setBiddingTeams,
+  getBidStateByAuction,
+};
