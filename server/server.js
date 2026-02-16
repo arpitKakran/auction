@@ -20,7 +20,7 @@ await connectDB();
 // ✅ CORS — THIS WAS MISSING
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://auction-beta-ten.vercel.app"],
     credentials: true,
   })
 );
