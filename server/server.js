@@ -38,7 +38,7 @@ app.use("/api/auction-player",auctionPlayerRouter);
 
 // Test
 app.get("/", (req, res) => {
-  res.send("Dhan Dhan Satguru Tera Hi Aasra");
+  res.send("ddstha");
 });
 
 const PORT = process.env.PORT || 9000;
