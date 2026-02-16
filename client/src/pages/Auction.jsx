@@ -144,13 +144,13 @@ const Auction = () => {
                   <div key={team._id} className="pt-2 border-t border-slate-200">
                     <p className="font-black text-sm text-blue-900 mb-2 underline decoration-blue-300 decoration-2">{team.globalTeam.shortCode} BIDS:</p>
                     <div className="grid grid-cols-3 gap-1">
-                      {[2000000, 2500000, 5000000].map((amt) => (
+                      {[0, -500000,-1000000, 2000000, 2500000, 5000000].map((amt) => (
                         <button
                           key={amt}
                           onClick={async () => { await incrementBid(auctionId, team._id, amt); refresh(); }}
                           className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md text-xs font-bold transition-colors"
                         >
-                          +{amt / 100000}L
+                          {amt / 100000}L
                         </button>
                       ))}
                     </div>

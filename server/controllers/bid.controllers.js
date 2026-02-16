@@ -61,7 +61,7 @@ const incrementBid = async (req, res) => {
   try {
     const { auctionId, teamId, increment } = req.body;
 
-    const allowedIncrements = [1000000, 2000000, 2500000];
+    const allowedIncrements = [0, -500000, -1000000, 2000000, 2500000, 5000000];
 
     if (!allowedIncrements.includes(increment)) {
       return res.status(400).json({
