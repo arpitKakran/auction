@@ -6,7 +6,7 @@ const playerSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["batter", "bowler", "allrounder", "keeper"],
+      enum: ["batter", "mark", "bowler", "allrounder", "keeper"],
       required: true,
     },
 

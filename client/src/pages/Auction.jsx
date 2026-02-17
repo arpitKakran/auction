@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 
-const roles = ["all", "batter", "bowler", "allrounder", "keeper"];
+const roles = ["all","mark", "batter", "bowler", "allrounder", "keeper"];
 
 const formatCurrency = (amount) => {
   if (!amount) return "₹ 0";
@@ -31,6 +31,7 @@ const Auction = () => {
   const [teamA, setTeamA] = useState("");
   const [teamB, setTeamB] = useState("");
   const [isSold, setIsSold] = useState(false);
+  const [customBid, setCustomBid] = useState("");
 
   const refresh = async () => {
     const a = await getAuctionById(auctionId);
@@ -102,9 +103,9 @@ const Auction = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2 mt-1">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Auction Control</p>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Auction Control</p>
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
@@ -116,7 +117,7 @@ const Auction = () => {
             </select>
             <button
               onClick={async () => { await nextPlayer(auctionId, selectedRole); refresh(); }}
-              className="w-full bg-slate-900 hover:bg-black text-white py-3 rounded-lg font-bold transition-all active:scale-95 shadow-lg"
+              className="w-full bg-slate-900 hover:bg-black text-white py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg"
             >
               NEXT PLAYER
             </button>
@@ -143,7 +144,7 @@ const Auction = () => {
                 return (
                   <div key={team._id} className="pt-2 border-t border-slate-200">
                     <p className="font-black text-sm text-blue-900 mb-2 underline decoration-blue-300 decoration-2">{team.globalTeam.shortCode} BIDS:</p>
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="grid grid-cols-3 gap-1 mb-2">
                       {[0, -500000,-1000000, 2000000, 2500000, 5000000].map((amt) => (
                         <button
                           key={amt}
@@ -153,6 +154,30 @@ const Auction = () => {
                           {amt / 100000}L
                         </button>
                       ))}
+                    </div>
+                    {/* CUSTOM BID INPUT */}
+                    <div className="flex gap-1">
+                        <input 
+                            type="number" 
+                            placeholder="Bid in Cr (e.g. 4.5)" 
+                            value={customBid}
+                            onChange={(e) => setCustomBid(e.target.value)}
+                            className="w-full border border-slate-300 rounded-md px-2 py-1 text-xs font-bold outline-none focus:ring-2 ring-blue-500"
+                        />
+                        <button 
+                            onClick={async () => {
+                                if(!customBid) return;
+                                const amountInCr = parseFloat(customBid);
+                                const amount = amountInCr * 10000000;
+                                const diff = amount - bidState.currentBid;
+                                await incrementBid(auctionId, team._id, diff);
+                                setCustomBid("");
+                                refresh();
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-xs font-bold"
+                        >
+                            BID
+                        </button>
                     </div>
                   </div>
                 );
@@ -243,21 +268,21 @@ const Auction = () => {
           REMAINING PURSE
         </h2>
 
-        <div className="grid grid-cols-2 gap-3 overflow-y-auto h-[90%] pr-1 custom-scrollbar">
+        <div className="grid grid-cols-2 gap-2 overflow-y-auto h-[90%] pr-1 custom-scrollbar">
           {auction.teams.slice(0, 12).map((team) => (
             <div
               key={team._id}
               className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-800 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <img src={team.globalTeam.logo} className="w-8 h-8 object-contain rounded-md bg-white p-0.5" alt="t-logo" />
-                <span className="font-black text-sm text-slate-200 tracking-tighter uppercase">
+                <img src={team.globalTeam.logo} className="w-11 h-11 object-contain rounded-md bg-white p-0.5" alt="t-logo" />
+                <span className="font-black text-lg font-bold text-slate-200 tracking-tighter uppercase">
                   {team.globalTeam.shortCode}
                 </span>
               </div>
 
-              <div className="mt-3">
-                <p className="text-md font-bold text-green-400 leading-none">
+              <div className="mt-1.5">
+                <p className="text-xl font-bold text-green-400 leading-none">
                     {formatCurrency(team.remainingPurse)}
                 </p>
                 <div className="h-1.5 w-full bg-slate-700 rounded-full mt-2 overflow-hidden">

@@ -61,13 +61,14 @@ const incrementBid = async (req, res) => {
   try {
     const { auctionId, teamId, increment } = req.body;
 
-    const allowedIncrements = [0, -500000, -1000000, 2000000, 2500000, 5000000];
+    // ALLOWED ALL INCREMENTS FOR CUSTOM BIDDING
+    // const allowedIncrements = [0, -500000, -1000000, 2000000, 2500000, 5000000];
 
-    if (!allowedIncrements.includes(increment)) {
-      return res.status(400).json({
-        message: "Invalid increment amount",
-      });
-    }
+    // if (!allowedIncrements.includes(increment)) {
+    //   return res.status(400).json({
+    //     message: "Invalid increment amount",
+    //   });
+    // }
 
     const bidState = await BidState.findOne({ auction: auctionId });
 
@@ -85,7 +86,7 @@ const incrementBid = async (req, res) => {
 
     // FIXED ObjectId comparison
     const isAllowedTeam = bidState.biddingTeams.some(
-      (t) => t.toString() === teamId
+      (t) => t.toString() === teamId,
     );
 
     if (!isAllowedTeam) {
@@ -95,10 +96,7 @@ const incrementBid = async (req, res) => {
     }
 
     // Prevent same team bidding consecutively
-    if (
-      bidState.leadingTeam &&
-      bidState.leadingTeam.toString() === teamId
-    ) {
+    if (bidState.leadingTeam && bidState.leadingTeam.toString() === teamId) {
       return res.status(400).json({
         message: "Same team cannot bid consecutively",
       });
@@ -162,9 +160,7 @@ const markSold = async (req, res) => {
       });
     }
 
-    const auctionPlayer = await AuctionPlayer.findById(
-      bidState.currentPlayer
-    );
+    const auctionPlayer = await AuctionPlayer.findById(bidState.currentPlayer);
 
     auctionPlayer.status = "sold";
     auctionPlayer.soldPrice = bidState.currentBid;
@@ -207,9 +203,7 @@ const markUnsold = async (req, res) => {
       });
     }
 
-    const auctionPlayer = await AuctionPlayer.findById(
-      bidState.currentPlayer
-    );
+    const auctionPlayer = await AuctionPlayer.findById(bidState.currentPlayer);
 
     auctionPlayer.status = "unsold";
     await auctionPlayer.save();
